@@ -1,6 +1,48 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
 
+buildscript {
+  repositories {
+    mavenCentral()
+    google()
+    gradlePluginPortal()
+  }
+
+  dependencies {
+    classpath "com.vanniktech:gradle-maven-publish-plugin:0.14.2"
+    classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.4.32"
+    classpath "org.jetbrains.dokka:android-documentation-plugin:1.4.32"
+  }
+}
+
+apply plugin: "com.vanniktech.maven.publish"
+
+// Find the first non-null Gradle property or environment variable
+// corresponding to the given names, giving preference to Gradle properties.
+String propOrEnv(String... names) {
+    // hasProperty, getProperty don't work when called directly in a closure;
+    // they need a receiver that knows about properties, like rootProject.
+    def p = rootProject
+    def result = names.findResult { p.hasProperty(it) ? p.getProperty(it) : System.getenv(it) }
+    if (result == null) {
+        logger.error("Missing gradle property or environment variable: $names")
+    }
+    return result
+}
+
+mavenPublish {
+    releaseSigningEnabled = false
+    targets {
+        // Modify the existing uploadArchives task
+        uploadArchives {
+            releaseRepositoryUrl = propOrEnv("ARTIFACTORY_URL", "instacart_artifactory_url")
+            snapshotRepositoryUrl = propOrEnv("ARTIFACTORY_URL", "instacart_artifactory_url")
+            repositoryUsername = propOrEnv("ARTIFACTORY_USERNAME", "instacart_artifactory_username") 
+            repositoryPassword = propOrEnv("ARTIFACTORY_PASSWORD", "instacart_artifactory_password")
+        }
+    }
+}
+
 android {
     compileSdkVersion rootProject.ext.sdkVersion
 
@@ -16,64 +58,64 @@ dependencies {
     implementation "androidx.appcompat:appcompat:1.1.0"
 }
 
-afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                from components.release
+// afterEvaluate {
+//     publishing {
+//         publications {
+//             release(MavenPublication) {
+//                 from components.release
 
-                group = 'com.github.chrisbanes'
-                artifactId = 'PhotoView'
-                version = '2.3.0'
+//                 group = 'com.github.chrisbanes'
+//                 artifactId = 'PhotoView'
+//                 version = '2.3.0'
 
-                // Adds javadocs and sources as separate jars.
-                artifact androidJavadocsJar
-                artifact(sourceJar)
+//                 // Adds javadocs and sources as separate jars.
+//                 artifact androidJavadocsJar
+//                 artifact(sourceJar)
 
-                pom {
-                    name = 'PhotoView'
-                    description = 'A simple ImageView that support zooming, both by Multi-touch gestures and double-tap.'
-                    url = 'https://github.com/Baseflow/PhotoView'
-                    licenses {
-                        license {
-                            name = 'The Apache License, Version 2.0'
-                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                        }
-                    }
-                    developers {
-                        developer {
-                            id = 'chrisbanes'
-                            name = 'Chris Banes'
-                        }
-                    }
-                    scm {
-                        connection = 'scm:git@github.com/chrisbanes/PhotoView.git'
-                        developerConnection = 'scm:git@github.com/chrisbanes/PhotoView.git'
-                        url = 'https://github.com/chrisbanes/PhotoView'
-                    }
-                }
-            }
-        }
-    }
-}
+//                 pom {
+//                     name = 'PhotoView'
+//                     description = 'A simple ImageView that support zooming, both by Multi-touch gestures and double-tap.'
+//                     url = 'https://github.com/Baseflow/PhotoView'
+//                     licenses {
+//                         license {
+//                             name = 'The Apache License, Version 2.0'
+//                             url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+//                         }
+//                     }
+//                     developers {
+//                         developer {
+//                             id = 'chrisbanes'
+//                             name = 'Chris Banes'
+//                         }
+//                     }
+//                     scm {
+//                         connection = 'scm:git@github.com/chrisbanes/PhotoView.git'
+//                         developerConnection = 'scm:git@github.com/chrisbanes/PhotoView.git'
+//                         url = 'https://github.com/chrisbanes/PhotoView'
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
 
-task androidJavadocs(type: Javadoc) {
-    source = android.sourceSets.main.java.srcDirs
-    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-    android.libraryVariants.all { variant ->
-        if (variant.name == 'release') {
-            owner.classpath += variant.javaCompileProvider.get().classpath
-        }
-    }
-    exclude '**/R.html', '**/R.*.html', '**/index.html'
-}
+// task androidJavadocs(type: Javadoc) {
+//     source = android.sourceSets.main.java.srcDirs
+//     classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+//     android.libraryVariants.all { variant ->
+//         if (variant.name == 'release') {
+//             owner.classpath += variant.javaCompileProvider.get().classpath
+//         }
+//     }
+//     exclude '**/R.html', '**/R.*.html', '**/index.html'
+// }
 
-task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
-    archiveClassifier.set('javadoc')
-    from androidJavadocs.destinationDir
-}
+// task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+//     archiveClassifier.set('javadoc')
+//     from androidJavadocs.destinationDir
+// }
 
-task sourceJar(type: Jar) {
-    from android.sourceSets.main.java.srcDirs
-    classifier "sources"
-}
+// task sourceJar(type: Jar) {
+//     from android.sourceSets.main.java.srcDirs
+//     classifier "sources"
+// }
